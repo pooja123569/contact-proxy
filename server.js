@@ -1,44 +1,43 @@
 import express from "express";
-import fetch from "node-fetch";
 import cors from "cors";
+import mysql from "mysql2/promise";
 
 const app = express();
 app.use(cors()); // allow all origins or restrict to your React domain
 app.use(express.json());
 
-// const TARGET = "https://visiomatixmedia.infinityfree.me/saveContact.php";
-
-const TARGET = "https://visiomatixmedia.infinityfree.me/saveContact.php?i=1";
-
+// === MySQL Connection ===
+// Replace with your InfinityFree / other MySQL credentials
+const db = await mysql.createPool({
+  host: "sql205.infinityfree.com",       // your MySQL host
+  user: "if0_40049891",                  // your MySQL username
+  password: "fmFOIuvmHyrG",              // your MySQL password
+  database: "if0_40049891_contact_db",   // your MySQL database name
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+});
 
 app.post("/api/contact", async (req, res) => {
   try {
     const { name, email, message } = req.body || {};
+
     if (!name || !email || !message) {
-      return res.status(400).json({ status: "error", message: "All fields required" });
+      return res.status(400).json({ status: "error", message: "All fields are required" });
     }
 
-    // Forward request to InfinityFree server
-    const response = await fetch(TARGET, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, message }),
-    });
+    // Save to MySQL
+    await db.query(
+      "INSERT INTO contacts (name, email, message) VALUES (?, ?, ?)",
+      [name, email, message]
+    );
 
-    const text = await response.text();
-
-    // Try to parse JSON safely
-    try {
-      const json = JSON.parse(text);
-      return res.status(response.status).json(json);
-    } catch {
-      return res.status(502).json({ status: "error", message: "Invalid response from upstream", raw: text.slice(0, 1000) });
-    }
+    return res.json({ status: "success", message: "Contact saved successfully" });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ status: "error", message: "Proxy server error" });
+    return res.status(500).json({ status: "error", message: "Server error" });
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Proxy server running on port ${PORT}`));
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
