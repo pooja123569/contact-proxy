@@ -5,11 +5,9 @@ import nodemailer from "nodemailer";
 const app = express();
 
 // === Update CORS ===
-// Allow requests from your React frontend
 app.use(cors({
-  origin: ["http://localhost:8081", "https://your-frontend-domain.com"], // add your deployed frontend URL here
+  origin: ["http://localhost:8081", "https://your-frontend-domain.com"], // Add your deployed frontend URL
   methods: ["GET", "POST"],
-  credentials: true,
 }));
 
 app.use(express.json());
@@ -20,8 +18,8 @@ console.log("🔧 Initializing Email server...");
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: "godagepooja2003@gmail.com",
-    pass: "fseuugdwuhxjqwep",
+    user: "godagepooja2003@gmail.com", // your verified Gmail
+    pass: "fseuugdwuhxjqwep",         // Gmail App Password
   },
 });
 
@@ -41,15 +39,24 @@ app.post("/api/contact", async (req, res) => {
       return res.status(400).json({ status: "error", message: "All fields are required" });
     }
 
+    // Updated mailOptions
     const mailOptions = {
-      from: email,
-      to: "godagepooja2003@gmail.com",
+      from: "godagepooja2003@gmail.com", // must be verified Gmail
+      to: "godagepooja2003@gmail.com",   // your email to receive messages
+      replyTo: email,                     // user’s email
       subject: `New Contact Form Submission from ${name}`,
       text: `Name: ${name}\nEmail: ${email}\nMessage: ${message}`,
     };
 
-    await transporter.sendMail(mailOptions);
-    return res.json({ status: "success", message: "Contact message sent successfully" });
+    try {
+      await transporter.sendMail(mailOptions);
+      console.log("✅ Email sent successfully!");
+      return res.json({ status: "success", message: "Contact message sent successfully" });
+    } catch (err) {
+      console.error("❌ Failed to send email:", err);
+      return res.status(500).json({ status: "error", message: "Failed to send email", details: err.message });
+    }
+
   } catch (err) {
     return res.status(500).json({ status: "error", message: "Server error", details: err.message });
   }
